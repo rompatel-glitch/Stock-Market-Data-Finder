@@ -1,3 +1,8 @@
 openai==0.27.0
 yfinance==0.2.12
 python-dotenv==1.0.0
+streamlit
+openai
+yfinance
+python-dotenv
+pandas
