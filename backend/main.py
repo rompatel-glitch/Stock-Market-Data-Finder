@@ -1,8 +1,8 @@
 import os
-import streamlit as st
 import openai
 import yfinance as yf
 import pandas as pd
+from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -10,11 +10,11 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai.api_key = OPENAI_API_KEY
 
-st.set_page_config(page_title="Stock Market Data Finder", page_icon="📊")
-st.title("📊 Stock Market Data Finder")
+app = Flask(__name__)
 
-company_name = st.text_input("Enter Company Name (e.g., Tesla, Apple, Google)")
-
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"message": "Stock Market Data Finder API Running!"})
 
 def get_ticker_from_name(company_name):
     """
@@ -40,7 +40,6 @@ def get_ticker_from_name(company_name):
     except Exception as e:
         return None
 
-
 def get_stock_data(ticker):
     """ Fetches stock market data from Yahoo Finance. """
     try:
@@ -53,27 +52,29 @@ def get_stock_data(ticker):
     except Exception as e:
         return None, None, None
 
+@app.route("/get_stock", methods=["GET"])
+def get_stock():
+    company_name = request.args.get("company_name")
+    
+    if not company_name:
+        return jsonify({"error": "Company name not provided"}), 400
 
-if st.button("Get Stock Data"):
-    if company_name:
-        with st.spinner("🔍 Fetching stock ticker..."):
-            ticker = get_ticker_from_name(company_name)
+    ticker = get_ticker_from_name(company_name)
 
-        if not ticker:
-            st.error("❌ Could not determine the stock ticker. Try again.")
-        else:
-            with st.spinner("🔍 Fetching stock data..."):
-                historical_data, financials, options = get_stock_data(ticker)
+    if not ticker:
+        return jsonify({"error": "Could not determine the stock ticker. Try again."}), 404
+    
+    historical_data, financials, options = get_stock_data(ticker)
 
-            st.markdown(f"### 📌 Stock Data for {company_name} ({ticker})")
+    if historical_data is None:
+        return jsonify({"error": "No data found for this ticker"}), 404
 
-            if historical_data is not None:
-                st.markdown("### 📜 Historical Market Data (Last 5 Days)")
-                st.dataframe(historical_data)
+    return jsonify({
+        "ticker": ticker,
+        "historical_data": historical_data.to_dict(),
+        "financials": financials.to_dict() if financials is not None else "N/A",
+        "options": options if options is not None else "N/A"
+    })
 
-            if financials is not None:
-                st.markdown("### 💰 Financial Statements")
-                st.dataframe(financials)
-
-    else:
-        st.warning("⚠️ Please enter a company name.")
+if __name__ == "__main__":
+    app.run(debug=True)
