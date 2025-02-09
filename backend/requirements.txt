@@ -3,3 +3,4 @@ yfinance==0.2.12
 python-dotenv==1.0.0
 streamlit
 pandas
+Flask
