@@ -2,6 +2,7 @@ import os
 import openai
 import yfinance as yf
 import pandas as pd
+import logging
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -12,8 +13,11 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai.api_key = OPENAI_API_KEY
 
 # Initialize Flask App
-app = Flask(__name__, static_folder="static")
+app = Flask(__name__, static_folder="static", static_url_path="")
 CORS(app)  # Allow CORS for frontend interactions
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
 
 @app.route("/")
 def home():
@@ -31,9 +35,15 @@ def get_ticker_from_name(company_name):
             max_tokens=10
         )
         result = response["choices"][0]["message"]["content"].strip().upper()
-        return result if " " not in result and len(result) <= 6 else None
+
+        # Check if OpenAI returned a valid ticker
+        if " " not in result and 1 <= len(result) <= 6:
+            return result
+        
+        logging.warning(f"OpenAI returned invalid ticker: {result}")
+        return None
     except Exception as e:
-        print(f"Error fetching ticker: {e}")
+        logging.error(f"Error fetching ticker from OpenAI: {e}")
         return None
 
 def get_stock_data(ticker):
@@ -48,7 +58,7 @@ def get_stock_data(ticker):
             "Net Income": round(financials.loc["Net Income"][0] / 1e9, 2) if financials is not None else "N/A",
             "EPS": round(stock.info.get("trailingEps", 0), 2),
             "Market Cap": round(stock.info.get("marketCap", 0) / 1e9, 2) if stock.info.get("marketCap") else "N/A",
-            "P/E Ratio": round(stock.info.get("trailingPE", 0), 2)
+            "P/E Ratio": round(stock.info.get("trailingPE", 0), 2) if stock.info.get("trailingPE") else "N/A"
         }
 
         # Get historical stock prices (Last 15 Days)
@@ -70,7 +80,7 @@ def get_stock_data(ticker):
 
         return fundamental_details, historical_prices, company_info
     except Exception as e:
-        print(f"Error fetching stock data: {e}")
+        logging.error(f"Error fetching stock data for {ticker}: {e}")
         return None, None, None
 
 @app.route("/get_stock", methods=["GET"])
@@ -80,7 +90,19 @@ def get_stock():
     if not company_name:
         return jsonify({"error": "Company name not provided"}), 400
 
+    logging.info(f"Fetching stock data for: {company_name}")
+
+    # First, try getting the ticker from OpenAI
     ticker = get_ticker_from_name(company_name)
+
+    # If OpenAI fails, try using Yahoo Finance directly
+    if not ticker:
+        try:
+            search_results = yf.Ticker(company_name)
+            if search_results and search_results.history(period="1d").empty is False:
+                ticker = company_name
+        except Exception as e:
+            logging.warning(f"Could not determine ticker from Yahoo Finance: {e}")
 
     if not ticker:
         return jsonify({"error": "Could not determine the stock ticker. Try again."}), 404
