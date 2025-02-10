@@ -49,8 +49,8 @@ def get_stock_data(ticker):
             "P/E Ratio": round(stock.info.get("trailingPE", 0), 2)
         }
 
-        # Get historical stock prices (30 days)
-        history = stock.history(period="1mo")[["Open", "High", "Low", "Close"]]
+        # Get historical stock prices (15 days)
+        history = stock.history(period="15d")[["Open", "High", "Low", "Close"]]
         history = history.reset_index().rename(columns={"Date": "date"})
         history["date"] = history["date"].dt.strftime('%Y-%m-%d')
         historical_prices = history.to_dict(orient="records")
