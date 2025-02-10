@@ -1,6 +1,6 @@
 Flask
 flask_cors
-openai
+openai>=1.0.0
 pandas
 requests
 python-dotenv
