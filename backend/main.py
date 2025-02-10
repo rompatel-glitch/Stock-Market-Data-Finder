@@ -27,8 +27,9 @@ def get_ticker_from_name(company_name):
     """Fetches the stock ticker symbol for a given company name using OpenAI API."""
     try:
         logging.info(f"Fetching ticker for: {company_name} using OpenAI")
-        
-        response = openai.ChatCompletion.create(
+
+        client = openai.OpenAI()  # New OpenAI client instance
+        response = client.chat.completions.create(
             model="gpt-4-turbo",
             messages=[
                 {"role": "system", "content": "You are an AI that finds the correct stock ticker based on a company name."},
@@ -36,9 +37,9 @@ def get_ticker_from_name(company_name):
             ],
             max_tokens=10
         )
-        result = response["choices"][0]["message"]["content"].strip().upper()
+        result = response.choices[0].message.content.strip().upper()
 
-        # Check if OpenAI returned a valid ticker
+        # Ensure response is a valid ticker
         if " " not in result and 1 <= len(result) <= 6:
             logging.info(f"OpenAI returned ticker: {result}")
             return result
