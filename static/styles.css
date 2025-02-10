@@ -1,0 +1,44 @@
+body {
+    background-color: #f4f6f9;
+    font-family: 'Roboto', sans-serif;
+}
+
+.container {
+    max-width: 900px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+table {
+    width: 100%;
+    margin-top: 20px;
+}
+
+th {
+    background-color: #007bff;
+    color: white;
+}
+
+.company-info {
+    background: #e9ecef;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.chart-container {
+    margin-top: 20px;
+}
+
+.radio-options {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.radio-options input {
+    margin-right: 5px;
+}
