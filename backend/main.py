@@ -3,6 +3,7 @@ import openai
 import yfinance as yf
 import pandas as pd
 from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS
 from dotenv import load_dotenv
 
 # Load API Keys
@@ -10,15 +11,16 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai.api_key = OPENAI_API_KEY
 
+# Initialize Flask App
 app = Flask(__name__, static_folder="static")
+CORS(app)  # Allow CORS for frontend interactions
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
-
 def get_ticker_from_name(company_name):
-    """ Fetches the stock ticker symbol for a given company name using OpenAI API. """
+    """Fetches the stock ticker symbol for a given company name using OpenAI API."""
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4-turbo",
@@ -30,27 +32,30 @@ def get_ticker_from_name(company_name):
         )
         result = response["choices"][0]["message"]["content"].strip().upper()
         return result if " " not in result and len(result) <= 6 else None
-    except Exception:
+    except Exception as e:
+        print(f"Error fetching ticker: {e}")
         return None
 
-
 def get_stock_data(ticker):
-    """ Fetches stock market data, financials, historical details, and company info. """
+    """Fetches stock market data, financials, historical details, and company info."""
     try:
         stock = yf.Ticker(ticker)
 
         # Get fundamental financials
-        financials = stock.financials
+        financials = stock.financials if "Total Revenue" in stock.financials.index else None
         fundamental_details = {
-            "Revenue": round(financials.loc["Total Revenue"][0] / 1e9, 2) if "Total Revenue" in financials.index else "N/A",
-            "Net Income": round(financials.loc["Net Income"][0] / 1e9, 2) if "Net Income" in financials.index else "N/A",
+            "Revenue": round(financials.loc["Total Revenue"][0] / 1e9, 2) if financials is not None else "N/A",
+            "Net Income": round(financials.loc["Net Income"][0] / 1e9, 2) if financials is not None else "N/A",
             "EPS": round(stock.info.get("trailingEps", 0), 2),
             "Market Cap": round(stock.info.get("marketCap", 0) / 1e9, 2) if stock.info.get("marketCap") else "N/A",
             "P/E Ratio": round(stock.info.get("trailingPE", 0), 2)
         }
 
-        # Get historical stock prices (15 days)
-        history = stock.history(period="15d")[["Open", "High", "Low", "Close"]]
+        # Get historical stock prices (Last 15 Days)
+        history = stock.history(period="15d")
+        if history.empty:
+            return None, None, None
+
         history = history.reset_index().rename(columns={"Date": "date"})
         history["date"] = history["date"].dt.strftime('%Y-%m-%d')
         historical_prices = history.to_dict(orient="records")
@@ -65,9 +70,8 @@ def get_stock_data(ticker):
 
         return fundamental_details, historical_prices, company_info
     except Exception as e:
-        print(f"Error fetching data: {e}")
+        print(f"Error fetching stock data: {e}")
         return None, None, None
-
 
 @app.route("/get_stock", methods=["GET"])
 def get_stock():
@@ -92,7 +96,6 @@ def get_stock():
         "historical_prices": historical_prices,
         "company_info": company_info
     })
-
 
 if __name__ == "__main__":
     app.run(debug=True)
