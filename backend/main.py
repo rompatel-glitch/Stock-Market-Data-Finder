@@ -26,6 +26,8 @@ def home():
 def get_ticker_from_name(company_name):
     """Fetches the stock ticker symbol for a given company name using OpenAI API."""
     try:
+        logging.info(f"Fetching ticker for: {company_name} using OpenAI")
+        
         response = openai.ChatCompletion.create(
             model="gpt-4-turbo",
             messages=[
@@ -38,6 +40,7 @@ def get_ticker_from_name(company_name):
 
         # Check if OpenAI returned a valid ticker
         if " " not in result and 1 <= len(result) <= 6:
+            logging.info(f"OpenAI returned ticker: {result}")
             return result
         
         logging.warning(f"OpenAI returned invalid ticker: {result}")
@@ -49,9 +52,15 @@ def get_ticker_from_name(company_name):
 def get_stock_data(ticker):
     """Fetches stock market data, financials, historical details, and company info."""
     try:
-        stock = yf.Ticker(ticker)
+        logging.info(f"Fetching stock data for ticker: {ticker}")
 
-        # Get fundamental financials
+        stock = yf.Ticker(ticker)
+        if not stock.history(period="1d").empty:
+            logging.info(f"Stock data found for {ticker}")
+        else:
+            logging.warning(f"No stock data found for {ticker}")
+
+        # Get financials
         financials = stock.financials if "Total Revenue" in stock.financials.index else None
         fundamental_details = {
             "Revenue": round(financials.loc["Total Revenue"][0] / 1e9, 2) if financials is not None else "N/A",
@@ -99,8 +108,9 @@ def get_stock():
     if not ticker:
         try:
             search_results = yf.Ticker(company_name)
-            if search_results and search_results.history(period="1d").empty is False:
+            if search_results and not search_results.history(period="1d").empty:
                 ticker = company_name
+                logging.info(f"Using Yahoo Finance as fallback for ticker: {ticker}")
         except Exception as e:
             logging.warning(f"Could not determine ticker from Yahoo Finance: {e}")
 
