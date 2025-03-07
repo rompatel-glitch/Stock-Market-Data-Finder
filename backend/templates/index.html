@@ -16,7 +16,8 @@
     <h1 class="text-center mt-4">Stock Market Data Finder</h1>
 
     <div class="search-container">
-        <input type="text" id="companyName" class="form-control" placeholder="Enter Company Name">
+        <!-- Fixed ID name to match script.js -->
+        <input type="text" id="stockInput" class="form-control" placeholder="Enter Company Name">
         <button class="btn btn-primary mt-3 w-100" onclick="fetchStockData()">Get Stock Data</button>
     </div>
 
@@ -27,14 +28,30 @@
         </div>
     </div>
 
+    <!-- Chart Container -->
+    <canvas id="stockChart" class="mt-4"></canvas> <!-- Added Chart Container -->
+
     <!-- Results Container -->
-    <div id="results"></div>
+    <div id="results">
+        <table class="table mt-4">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Open</th>
+                    <th>High</th>
+                    <th>Low</th>
+                    <th>Close</th>
+                </tr>
+            </thead>
+            <tbody id="historicalData"></tbody>
+        </table>
+    </div>
 
     <!-- External JavaScript -->
     <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+    
     <footer style="text-align: center; padding: 10px; font-size: 14px; color: gray;">
-    Developed by <strong>Rom Patel</strong>
-</footer>
-
+        Developed by <strong>Rom Patel</strong>
+    </footer>
 </body>
 </html>
