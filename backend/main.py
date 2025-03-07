@@ -53,27 +53,33 @@ def get_ticker_from_name(company_name):
 import requests
 import logging
 
+import requests
+import logging
+
 def get_stock_data(ticker):
     """Fetch stock market data using Alpha Vantage API."""
-    API_KEY = "ALPHA_VANTAGE_API_KEY"
+    API_KEY = "ALPHA_VANTAGE_API_KEY"  
     url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&apikey={API_KEY}"
-    
+
     try:
         response = requests.get(url)
         data = response.json()
 
-        # Check if the response contains stock data
+        # Print the full API response for debugging
+        print(f"🔍 Alpha Vantage Response for {ticker}: {data}")  
+
+        # Check if the API response contains stock data
         if "Time Series (Daily)" not in data:
             logging.error(f"Alpha Vantage API returned no data for {ticker}: {data}")
             return None, None, None
 
-        # Extract historical stock prices (Last 15 Days)
+        # Extract last 15 days of stock prices
         historical_prices = [
             {"date": date, "close_price": values["4. close"]}
             for date, values in sorted(data["Time Series (Daily)"].items(), reverse=True)[:15]
         ]
 
-        # Dummy values for fundamental details (Alpha Vantage free API doesn't provide these)
+        # Dummy values for missing financials
         fundamental_details = {
             "Revenue": "N/A",
             "Net Income": "N/A",
@@ -82,7 +88,7 @@ def get_stock_data(ticker):
             "P/E Ratio": "N/A"
         }
 
-        # Dummy company info (Alpha Vantage free API doesn't provide this)
+        # Dummy company info
         company_info = {
             "Name": ticker,
             "Sector": "N/A",
