@@ -50,45 +50,48 @@ def get_ticker_from_name(company_name):
         logging.error(f"Error fetching ticker from OpenAI: {e}")
         return None
 
+import requests
+import logging
+
 def get_stock_data(ticker):
-    """Fetches stock market data, financials, historical details, and company info."""
+    """Fetch stock market data using Alpha Vantage API."""
+    API_KEY = "ALPHA_VANTAGE_API_KEY"
+    url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&apikey={API_KEY}"
+    
     try:
-        logging.info(f"Fetching stock data for ticker: {ticker}")
+        response = requests.get(url)
+        data = response.json()
 
-        stock = yf.Ticker(ticker)
-        if not stock.history(period="1d").empty:
-            logging.info(f"Stock data found for {ticker}")
-        else:
-            logging.warning(f"No stock data found for {ticker}")
-
-        # Get financials
-        financials = stock.financials if "Total Revenue" in stock.financials.index else None
-        fundamental_details = {
-            "Revenue": round(financials.loc["Total Revenue"][0] / 1e9, 2) if financials is not None else "N/A",
-            "Net Income": round(financials.loc["Net Income"][0] / 1e9, 2) if financials is not None else "N/A",
-            "EPS": round(stock.info.get("trailingEps", 0), 2),
-            "Market Cap": round(stock.info.get("marketCap", 0) / 1e9, 2) if stock.info.get("marketCap") else "N/A",
-            "P/E Ratio": round(stock.info.get("trailingPE", 0), 2) if stock.info.get("trailingPE") else "N/A"
-        }
-
-        # Get historical stock prices (Last 15 Days)
-        history = stock.history(period="15d")
-        if history.empty:
+        # Check if the response contains stock data
+        if "Time Series (Daily)" not in data:
+            logging.error(f"Alpha Vantage API returned no data for {ticker}: {data}")
             return None, None, None
 
-        history = history.reset_index().rename(columns={"Date": "date"})
-        history["date"] = history["date"].dt.strftime('%Y-%m-%d')
-        historical_prices = history.to_dict(orient="records")
+        # Extract historical stock prices (Last 15 Days)
+        historical_prices = [
+            {"date": date, "close_price": values["4. close"]}
+            for date, values in sorted(data["Time Series (Daily)"].items(), reverse=True)[:15]
+        ]
 
-        # Get company info
+        # Dummy values for fundamental details (Alpha Vantage free API doesn't provide these)
+        fundamental_details = {
+            "Revenue": "N/A",
+            "Net Income": "N/A",
+            "EPS": "N/A",
+            "Market Cap": "N/A",
+            "P/E Ratio": "N/A"
+        }
+
+        # Dummy company info (Alpha Vantage free API doesn't provide this)
         company_info = {
-            "Name": stock.info.get("longName", "N/A"),
-            "Sector": stock.info.get("sector", "N/A"),
-            "Industry": stock.info.get("industry", "N/A"),
-            "Description": stock.info.get("longBusinessSummary", "N/A")
+            "Name": ticker,
+            "Sector": "N/A",
+            "Industry": "N/A",
+            "Description": "Stock data retrieved from Alpha Vantage."
         }
 
         return fundamental_details, historical_prices, company_info
+
     except Exception as e:
         logging.error(f"Error fetching stock data for {ticker}: {e}")
         return None, None, None
